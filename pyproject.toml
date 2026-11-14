@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scaredbleed"
+version = "0.1.0"
+description = "Test your own LLM apps for secret leaks and prompt injection."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "PurpleTeamAbra" }]
+
+[project.scripts]
+scaredbleed = "scaredbleed:main"
+
+[tool.setuptools]
+py-modules = ["scaredbleed"]
