@@ -52,6 +52,18 @@ scaredbleed demo --hardened
 
 Running from the source file instead? Use `python3 scaredbleed.py demo`.
 
+## Try a live scan
+
+Two terminals. In the first, start the included leaky test bot:
+```
+python3 examples/testbot.py
+```
+In the second, scan it:
+```
+scaredbleed scan --url http://127.0.0.1:8000/chat --canary SB-CANARY-7f3a9c
+```
+You should see 2 of 11 probes bled.
+
 ## Scan your own app
 
 1. Plant a fake canary string (for example `SB-CANARY-7f3a9c`) in your app's system prompt.
@@ -73,6 +85,8 @@ Options:
 - Simple evasion tricks
 
 A **LEAK** means your canary appeared in the reply. A **HIJACK** means the app obeyed injected text.
+
+> A clean scan does not prove your app is secure. It only means these specific tests did not succeed.
 
 ## Use in CI
 

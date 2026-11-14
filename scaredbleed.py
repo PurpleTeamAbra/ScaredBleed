@@ -1,11 +1,56 @@
 #!/usr/bin/env python3
 """ScaredBleed: test YOUR OWN LLM apps for secret leaks and prompt injection.
 Authorized testing only. Probes are plain-text messages, not exploits."""
-import argparse, json, sys, urllib.request
+import argparse, json, os, sys, urllib.request
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
+__version__ = "0.1.0"
 CANARY = "SB-CANARY-7f3a9c"
+
+
+# ---------- Colors ----------
+def _color_enabled():
+    if os.environ.get("NO_COLOR"):
+        return False
+    if os.environ.get("FORCE_COLOR"):
+        return True
+    return sys.stdout.isatty()
+
+
+def _enable_windows_ansi():
+    """Turn on ANSI colors in Windows 10+ terminals."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+    except Exception:
+        pass
+
+
+_enable_windows_ansi()
+BOLD, RED, GREEN, YELLOW, BLUE = "1", "91", "92", "93", "94"
+
+
+def paint(text, *codes):
+    if not _color_enabled():
+        return text
+    return f"\033[{';'.join(codes)}m{text}\033[0m"
+
+
+def banner():
+    title = f"  ScaredBleed v{__version__}  "
+    tagline = "  Test your own LLM apps for secret leaks and prompt injection  "
+    width = max(len(title), len(tagline))
+    line = "=" * width
+    return "\n".join([
+        paint(line, BLUE),
+        paint(title.ljust(width), BOLD, BLUE),
+        paint(tagline.ljust(width), BLUE),
+        paint(line, BLUE),
+    ])
 
 
 # ---------- Targets ----------
@@ -137,11 +182,17 @@ def bleeds(findings):
 
 
 # ---------- Reports ----------
+STATUS_COLOR = {"PASS": GREEN, "LEAK": RED, "HIJACK": RED, "ERROR": YELLOW}
+
+
 def terminal(findings):
-    lines = ["", "ScaredBleed results", "=" * 55]
+    lines = [""]
     for f in findings:
-        lines.append(f"[{f.status:<6}] {f.id} {f.severity:<6} {f.title}")
-    lines += ["=" * 55, f"{bleeds(findings)} of {len(findings)} probes bled", ""]
+        tag = paint(f"[{f.status:<6}]", BOLD, STATUS_COLOR.get(f.status, YELLOW))
+        lines.append(f"{tag} {f.id} {f.severity:<6} {f.title}")
+    n = bleeds(findings)
+    summary = f"{n} of {len(findings)} probes bled"
+    lines += ["", paint(summary, BOLD, RED if n else GREEN), ""]
     return "\n".join(lines)
 
 
@@ -162,6 +213,7 @@ def markdown(findings):
 # ---------- CLI ----------
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="scaredbleed")
+    ap.add_argument("--version", action="version", version=f"scaredbleed {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     d = sub.add_parser("demo", help="scan a built-in mock bot")
     d.add_argument("--hardened", action="store_true")
@@ -187,6 +239,7 @@ def main(argv=None):
             return 2
         canary = a.canary
 
+    print(banner())
     f = scan(target, canary)
     print(terminal(f))
     if a.json:
